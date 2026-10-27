@@ -13,6 +13,7 @@ Original file is located at
 
 import pandas as pd
 from google import genai
+from IPython.display import display
 
 print("pandas version:", pd.__version__)
 print("Gemini library imported successfully!")
