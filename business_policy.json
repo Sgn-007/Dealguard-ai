@@ -1,0 +1,37 @@
+{
+  "policy_id": "DG-DEMO-001",
+  "policy_version": "1.0",
+  "currency_assumption": "GBP; original uploaded retail CSV does not explicitly identify currency",
+  "minimum_contribution_margin_pct": 20,
+  "discount_approval_threshold_pct": 15,
+  "discount_threshold_comparison": "strictly greater than 15%",
+  "discount_scenario_range_pct": [
+    0,
+    35
+  ],
+  "financial_formulas": {
+    "list_value": "quantity * reference_unit_price",
+    "selling_value": "list_value * (1 - proposed_discount_pct / 100)",
+    "total_direct_cost": "quantity * estimated_direct_cost_per_unit",
+    "contribution": "selling_value - total_direct_cost",
+    "contribution_margin_pct": "100 * contribution / selling_value",
+    "maximum_discount_for_margin_pct": "100 * (1 - total_direct_cost / (list_value * (1 - minimum_contribution_margin_pct / 100)))"
+  },
+  "rules": {
+    "margin_below_minimum": "Human review required; do not automatically reject",
+    "discount_above_threshold": "Manager approval required even if margin meets minimum",
+    "otherwise": "Within illustrative policy; final decision remains with humans"
+  },
+  "data_provenance": {
+    "products": "Product codes, names and reference prices derived from uploaded retail CSV",
+    "direct_costs": "Simulated estimates; not real costs",
+    "opportunities": "Entirely synthetic prospective deal scenarios",
+    "customer_accounts": "Customer IDs from provided 50-account file"
+  },
+  "limitations": [
+    "Demo-only policy; not a universal business standard",
+    "Contribution margin is not net profit",
+    "Do not treat simulated opportunities as historical transactions or realized sales",
+    "No empirical business-impact claims are supported by this generated dataset"
+  ]
+}

@@ -1,0 +1,9 @@
+Product_ID,Product_Name,Reference_Unit_Price,Estimated_Direct_Cost_Per_Unit,Cost_Assumption_Ratio,Currency,Price_Source,Cost_Source,Record_Type
+20725,LUNCH BAG RED RETROSPOT,1.65,0.92,0.5591,GBP (assumed for demonstration),Uploaded online_retail.csv,Synthetic estimate; not observed,Mixed: observed product/price; simulated cost
+21212,PACK OF 72 RETROSPOT CAKE CASES,0.55,0.39,0.7088,GBP (assumed for demonstration),Uploaded online_retail.csv,Synthetic estimate; not observed,Mixed: observed product/price; simulated cost
+22086,PAPER CHAIN KIT 50'S CHRISTMAS,2.55,1.82,0.7132,GBP (assumed for demonstration),Uploaded online_retail.csv,Synthetic estimate; not observed,Mixed: observed product/price; simulated cost
+22423,REGENCY CAKESTAND 3 TIER,12.75,7.23,0.5674,GBP (assumed for demonstration),Uploaded online_retail.csv,Synthetic estimate; not observed,Mixed: observed product/price; simulated cost
+22720,SET OF 3 CAKE TINS PANTRY DESIGN,4.95,3.20,0.6473,GBP (assumed for demonstration),Uploaded online_retail.csv,Synthetic estimate; not observed,Mixed: observed product/price; simulated cost
+23166,MEDIUM CERAMIC TOP STORAGE JAR,1.04,0.62,0.5964,GBP (assumed for demonstration),Uploaded online_retail.csv,Synthetic estimate; not observed,Mixed: observed product/price; simulated cost
+47566,PARTY BUNTING,4.95,3.48,0.7030,GBP (assumed for demonstration),Uploaded online_retail.csv,Synthetic estimate; not observed,Mixed: observed product/price; simulated cost
+84879,ASSORTED COLOUR BIRD ORNAMENT,1.69,1.24,0.7344,GBP (assumed for demonstration),Uploaded online_retail.csv,Synthetic estimate; not observed,Mixed: observed product/price; simulated cost

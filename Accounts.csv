@@ -1,0 +1,51 @@
+Customer ID,Account Name,Customer Type,Country,Account Manager,Account Created,Preferred Contact,Contact Email,Payment Terms
+17001,Brightside Bakes Ltd,Retail Shop,United Kingdom,Meera Nair,2010-11-18,Email,orders@brightsidebakes.example.com,Net 30
+17002,Harrow & Co Homewares,Retail Shop,United Kingdom,Meera Nair,2010-11-25,Phone,buyer@harrowco.example.com,Net 30
+17003,De Oranje Seasonal BV,Seasonal Reseller,Netherlands,Arjun Rao,2010-11-20,Email,inkoop@oranjeseasonal.example.com,Net 45
+17004,Corner Cupboard Gifts,Small Retailer,United Kingdom,Daniel Price,2010-12-10,Email,hello@cornercupboard.example.com,Prepaid
+17005,Kuechenwelt GmbH,Retail Chain,Germany,Arjun Rao,2010-12-01,Phone,einkauf@kuechenwelt.example.com,Net 30
+17006,Maison Petit Cadeau,Retail Shop,France,Daniel Price,2011-10-10,Email,commandes@maisonpetit.example.com,Prepaid
+17007,Emerald Wholesale Ltd,Wholesaler,EIRE,Meera Nair,2010-11-30,Phone,purchasing@emeraldwholesale.example.com,Net 45
+17008,Willowbrook Gifts Ltd,Retail Shop,United Kingdom,Meera Nair,2010-11-01,Email,accounts@willowbrookdemo01.example.com,Net 30
+17009,Oakfield Homeware Trading,Small Retailer,Netherlands,Arjun Rao,2010-11-10,Phone,accounts@oakfielddemo02.example.com,Net 45
+17010,Maple Lane Retail Partners,Retail Chain,Germany,Daniel Price,2010-11-19,Email,accounts@maplelanedemo03.example.com,Prepaid
+17011,Silverfern Seasonal Goods,Seasonal Reseller,France,Meera Nair,2010-11-28,Phone,accounts@silverferndemo04.example.com,Net 60
+17012,Westhaven Wholesale Supplies,Wholesaler,EIRE,Arjun Rao,2010-12-07,Email,accounts@westhavendemo05.example.com,Net 30
+17013,Rosewood Boutique Stores,Retail Shop,Belgium,Daniel Price,2010-12-16,Phone,accounts@rosewooddemo06.example.com,Net 45
+17014,Cedar House Lifestyle Merchants,Small Retailer,Spain,Meera Nair,2010-12-25,Email,accounts@cedarhousedemo07.example.com,Prepaid
+17015,Harbourview Gifts Ltd,Retail Chain,Portugal,Arjun Rao,2011-01-03,Phone,accounts@harbourviewdemo08.example.com,Net 60
+17016,Greenstone Homeware Trading,Seasonal Reseller,Italy,Daniel Price,2011-01-12,Email,accounts@greenstonedemo09.example.com,Net 30
+17017,Brookfield Retail Partners,Wholesaler,Sweden,Meera Nair,2011-01-21,Phone,accounts@brookfielddemo10.example.com,Net 45
+17018,Elm & Ivy Seasonal Goods,Retail Shop,United Kingdom,Arjun Rao,2011-01-30,Email,accounts@elmivydemo11.example.com,Prepaid
+17019,Suncrest Wholesale Supplies,Small Retailer,Netherlands,Daniel Price,2011-02-08,Phone,accounts@suncrestdemo12.example.com,Net 60
+17020,Northgate Boutique Stores,Retail Chain,Germany,Meera Nair,2011-02-17,Email,accounts@northgatedemo13.example.com,Net 30
+17021,Amberleaf Lifestyle Merchants,Seasonal Reseller,France,Arjun Rao,2011-02-26,Phone,accounts@amberleafdemo14.example.com,Net 45
+17022,Clearwater Gifts Ltd,Wholesaler,EIRE,Daniel Price,2011-03-07,Email,accounts@clearwaterdemo15.example.com,Prepaid
+17023,Meadowlark Homeware Trading,Retail Shop,Belgium,Meera Nair,2011-03-16,Phone,accounts@meadowlarkdemo16.example.com,Net 60
+17024,Stonebridge Retail Partners,Small Retailer,Spain,Arjun Rao,2011-03-25,Email,accounts@stonebridgedemo17.example.com,Net 30
+17025,Larkspur Seasonal Goods,Retail Chain,Portugal,Daniel Price,2011-04-03,Phone,accounts@larkspurdemo18.example.com,Net 45
+17026,Riverside Wholesale Supplies,Seasonal Reseller,Italy,Meera Nair,2011-04-12,Email,accounts@riversidedemo19.example.com,Prepaid
+17027,Fairhaven Boutique Stores,Wholesaler,Sweden,Arjun Rao,2011-04-21,Phone,accounts@fairhavendemo20.example.com,Net 60
+17028,Copperfield Lifestyle Merchants,Retail Shop,United Kingdom,Daniel Price,2011-04-30,Email,accounts@copperfielddemo21.example.com,Net 30
+17029,Briarwood Gifts Ltd,Small Retailer,Netherlands,Meera Nair,2011-05-09,Phone,accounts@briarwooddemo22.example.com,Net 45
+17030,Bluebell Homeware Trading,Retail Chain,Germany,Arjun Rao,2011-05-18,Email,accounts@bluebelldemo23.example.com,Prepaid
+17031,Woodland Retail Partners,Seasonal Reseller,France,Daniel Price,2011-05-27,Phone,accounts@woodlanddemo24.example.com,Net 60
+17032,Eastwick Seasonal Goods,Wholesaler,EIRE,Meera Nair,2011-06-05,Email,accounts@eastwickdemo25.example.com,Net 30
+17033,Hillcrest Wholesale Supplies,Retail Shop,Belgium,Arjun Rao,2011-06-14,Phone,accounts@hillcrestdemo26.example.com,Net 45
+17034,Cloverfield Boutique Stores,Small Retailer,Spain,Daniel Price,2011-06-23,Email,accounts@cloverfielddemo27.example.com,Prepaid
+17035,Birchwood Lifestyle Merchants,Retail Chain,Portugal,Meera Nair,2011-07-02,Phone,accounts@birchwooddemo28.example.com,Net 60
+17036,Hearthside Gifts Ltd,Seasonal Reseller,Italy,Arjun Rao,2011-07-11,Email,accounts@hearthsidedemo29.example.com,Net 30
+17037,Ashgrove Homeware Trading,Wholesaler,Sweden,Daniel Price,2011-07-20,Phone,accounts@ashgrovedemo30.example.com,Net 45
+17038,Golden Meadow Retail Partners,Retail Shop,United Kingdom,Meera Nair,2011-07-29,Email,accounts@goldenmeadowdemo31.example.com,Prepaid
+17039,Springwell Seasonal Goods,Small Retailer,Netherlands,Arjun Rao,2011-08-07,Phone,accounts@springwelldemo32.example.com,Net 60
+17040,Parkside Wholesale Supplies,Retail Chain,Germany,Daniel Price,2011-08-16,Email,accounts@parksidedemo33.example.com,Net 30
+17041,Redwood Boutique Stores,Seasonal Reseller,France,Meera Nair,2011-08-25,Phone,accounts@redwooddemo34.example.com,Net 45
+17042,Bellflower Lifestyle Merchants,Wholesaler,EIRE,Arjun Rao,2011-09-03,Email,accounts@bellflowerdemo35.example.com,Prepaid
+17043,Whitehall Gifts Ltd,Retail Shop,Belgium,Daniel Price,2011-09-12,Phone,accounts@whitehalldemo36.example.com,Net 60
+17044,Linden Homeware Trading,Small Retailer,Spain,Meera Nair,2011-09-21,Email,accounts@lindendemo37.example.com,Net 30
+17045,Foxglove Retail Partners,Retail Chain,Portugal,Arjun Rao,2011-09-30,Phone,accounts@foxglovedemo38.example.com,Net 45
+17046,Morningstar Seasonal Goods,Seasonal Reseller,Italy,Daniel Price,2011-10-09,Email,accounts@morningstardemo39.example.com,Prepaid
+17047,Fernhill Wholesale Supplies,Wholesaler,Sweden,Meera Nair,2011-10-18,Phone,accounts@fernhilldemo40.example.com,Net 60
+17048,Orchard Lane Boutique Stores,Retail Shop,United Kingdom,Arjun Rao,2011-10-27,Email,accounts@orchardlanedemo41.example.com,Net 30
+17049,Seabrook Lifestyle Merchants,Small Retailer,Netherlands,Daniel Price,2011-11-05,Phone,accounts@seabrookdemo42.example.com,Net 45
+17050,Kingswell Gifts Ltd,Retail Chain,Germany,Meera Nair,2011-11-14,Email,accounts@kingswelldemo43.example.com,Prepaid

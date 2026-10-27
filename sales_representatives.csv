@@ -1,0 +1,11 @@
+Sales_Rep_ID,Sales_Rep_Name,Sales_Team,Role,Assigned_Opportunity_Count,Manager_Approval_Authority,Approval_Escalation_Role,Currency,Record_Type
+REP001,Arjun Rao,Wholesale Accounts,Sales Representative,25,No,Sales Manager,GBP (assumed for demonstration),Synthetic staff profile; not a real employee
+REP002,Daniel Price,Wholesale Accounts,Sales Representative,25,No,Sales Manager,GBP (assumed for demonstration),Synthetic staff profile; not a real employee
+REP003,Meera Nair,Wholesale Accounts,Sales Representative,25,No,Sales Manager,GBP (assumed for demonstration),Synthetic staff profile; not a real employee
+REP004,Kavya Menon,Wholesale Accounts,Sales Representative,25,No,Sales Manager,GBP (assumed for demonstration),Synthetic staff profile; not a real employee
+REP005,Rohan Shah,Wholesale Accounts,Sales Representative,25,No,Sales Manager,GBP (assumed for demonstration),Synthetic staff profile; not a real employee
+REP006,Priya Iyer,Wholesale Accounts,Sales Representative,25,No,Sales Manager,GBP (assumed for demonstration),Synthetic staff profile; not a real employee
+REP007,Nikhil Patel,Wholesale Accounts,Sales Representative,25,No,Sales Manager,GBP (assumed for demonstration),Synthetic staff profile; not a real employee
+REP008,Ananya Das,Wholesale Accounts,Sales Representative,25,No,Sales Manager,GBP (assumed for demonstration),Synthetic staff profile; not a real employee
+REP009,Vikram Sethi,Wholesale Accounts,Sales Representative,25,No,Sales Manager,GBP (assumed for demonstration),Synthetic staff profile; not a real employee
+REP010,Sara Thomas,Wholesale Accounts,Sales Representative,25,No,Sales Manager,GBP (assumed for demonstration),Synthetic staff profile; not a real employee
