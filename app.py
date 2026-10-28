@@ -734,155 +734,337 @@ except Exception:
     DEALGUARD_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
 gemini_client = genai.Client(api_key=api_key) if api_key else None
 
-st.title("DealGuard")
-st.caption("AI-Powered Deal Profitability & Discount Intelligence | Salesforce Sales Cloud concept prototype")
-st.info("Academic prototype: synthetic opportunity records, estimated direct costs and assumed GBP. Advisory only; no Salesforce updates or autonomous approvals.")
 
-mode = st.radio("Analysis type", ["Existing opportunity", "Enter deal details manually"], horizontal=True)
+# ---------------------------------------------------------------------
+# DealGuard | Opportunity-grounded, prompt-driven decision workspace
+# ---------------------------------------------------------------------
+import json
+import html
 
-if mode == "Existing opportunity":
-    st.write("Enter an opportunity ID (for example, OPP00001). No opportunity is selected automatically.")
-    with st.form("opportunity_form"):
-        entered_id = st.text_input("Opportunity ID *", value="", placeholder="Enter opportunity ID")
-        question = st.text_area("Your question *", value="", placeholder="What would you like DealGuard to evaluate?")
-        submitted = st.form_submit_button("Analyse opportunity", type="primary")
+st.markdown("""
+<style>
+.stApp {background: radial-gradient(ellipse at 80% 0%, #183355 0%, #0b1425 38%, #080f1d 100%); color: #e9f2ff;}
+[data-testid="stHeader"] {background: transparent;}
+[data-testid="stSidebar"] {background: #101c30;}
+.block-container {max-width: 1200px; padding-top: 2rem; padding-bottom: 4rem;}
+h1,h2,h3 {color: #f0f6ff !important; letter-spacing: -.025em;}
+p, label, .stMarkdown {color: #d6e3f5;}
+[data-testid="stForm"] {background: #111f35; border: 1px solid #294262; border-radius: 20px; padding: 24px;}
+[data-testid="stMetric"] {background: #14243b; border: 1px solid #2b4667; border-radius: 16px; padding: 18px;}
+[data-testid="stMetricLabel"] {color: #a9c0df;}
+[data-testid="stMetricValue"] {color: #ffffff;}
+div.stButton > button, div.stFormSubmitButton > button {
+  background: linear-gradient(100deg, #10b6a6, #3675f5); color: white;
+  border: none; border-radius: 12px; font-weight: 700; min-height: 44px;
+}
+div.stButton > button:hover, div.stFormSubmitButton > button:hover {color:white; border: 1px solid #9aece1;}
+input, textarea {border-radius: 10px !important;}
+.hero {background:linear-gradient(120deg,#142e4b,#10233b 56%,#123c48);
+ border:1px solid #2c5570; border-radius:24px; padding:34px 36px; margin-bottom:24px;}
+.eyebrow {color:#64e4d4; font-size:.8rem; font-weight:800; letter-spacing:.16em;}
+.hero-title {font-size:3.1rem; font-weight:850; color:#fff; line-height:1.1; margin:10px 0;}
+.hero-sub {color:#b9cce3; max-width:780px; line-height:1.6;}
+.pill {display:inline-block; padding:6px 11px; border:1px solid #397f85; border-radius:99px;
+ color:#80f0df; font-size:.78rem; margin-top:16px; margin-right:8px;}
+.section-kicker {color:#7fd8ee; font-weight:800; letter-spacing:.07em; font-size:.82rem; margin-top:18px;}
+.note {background:#12233b; border-left:3px solid #39c8bc; border-radius:10px; padding:15px 18px; color:#c6d9ed;}
+</style>
+""", unsafe_allow_html=True)
 
-    if submitted:
-        opportunity_id = entered_id.strip().upper()
-        if not opportunity_id or not question.strip():
-            st.warning("Enter both an opportunity ID and a question.")
-        elif opportunity_id not in set(opportunities["Opportunity_ID"].astype(str)):
-            st.error(f"Opportunity {opportunity_id} was not found. Enter a valid opportunity ID from the dataset.")
-        else:
-            st.session_state["dealguard_result"] = {"mode": "existing", "id": opportunity_id, "question": question.strip()}
+st.markdown("""
+<div class="hero">
+ <div class="eyebrow">DEAL INTELLIGENCE WORKSPACE</div>
+ <div class="hero-title">DealGuard <span style="color:#58decf">AI</span></div>
+ <div class="hero-sub">Enter your proposed deal and ask a question. DealGuard calculates profitability, checks approval rules,
+ and consults comparable demonstration opportunities automatically to produce tailored recommendations.</div>
+ <span class="pill">Automatic reference retrieval</span>
+ <span class="pill">Prompt-driven recommendations</span>
+ <span class="pill">Human-controlled decisions</span>
+</div>
+""", unsafe_allow_html=True)
 
-    result_state = st.session_state.get("dealguard_result")
-    if result_state and result_state.get("mode") == "existing":
-        selected = result_state["id"]
-        opp = analyze_opportunity(selected)
-        financial = opp["financial_analysis"]
-        scenario = compare_discount_scenarios_verified(selected)
-        customer = get_customer_profile(opp["customer_id"])
+with st.sidebar:
+    st.markdown("### Policy guardrails")
+    st.metric("Minimum contribution margin", f"{MIN_MARGIN}%")
+    st.metric("Manager approval above", f"{APPROVAL_THRESHOLD}%")
+    st.caption("Approval is required only when the proposed discount strictly exceeds the threshold. Margin breaches independently require human review.")
+    st.divider()
+    st.markdown("### Data context")
+    st.write(f"**{len(opportunities)}** reference opportunities")
+    st.write(f"**{len(accounts)}** customer accounts")
+    st.caption("Academic demonstration. Synthetic opportunities, estimated costs and sample-based customer history. No Salesforce connection or autonomous approvals.")
 
-        st.subheader(f"{selected} · {opp['account_name']}")
-        st.caption(f"Product: {opp['product_name']} | Quantity: {opp['quantity']} | Sales representative: {opp['sales_representative']} | Stage: {opp['opportunity_stage']}")
-        c1, c2, c3, c4 = st.columns(4)
-        c1.metric("Proposed discount", f"{float(financial['proposed_discount_pct']):.2f}%")
-        c2.metric("Estimated contribution margin", f"{float(financial['contribution_margin_pct']):.2f}%")
-        c3.metric("Minimum margin", f"{float(MIN_MARGIN):.0f}%")
-        safe = scenario["recommended_maximum_margin_safe_discount_pct"]
-        c4.metric("Maximum margin-safe discount", f"{safe:.2f}%" if safe is not None else "Not feasible")
+def clean_decimal(raw, label, *, positive=False, nonnegative=False):
+    if not raw.strip():
+        raise ValueError(f"Enter {label}.")
+    try:
+        value = D(raw.strip().replace(",", ""))
+    except Exception:
+        raise ValueError(f"{label} must be numeric.")
+    if not value.is_finite():
+        raise ValueError(f"{label} must be finite.")
+    if positive and value <= 0:
+        raise ValueError(f"{label} must be greater than zero.")
+    if nonnegative and value < 0:
+        raise ValueError(f"{label} cannot be negative.")
+    return value
 
-        if financial["margin_breach"]:
-            st.error("Contribution margin is below the policy minimum. Human review is required.")
-        else:
-            st.success("Contribution margin meets the minimum policy threshold.")
-        if financial["manager_approval_required"]:
-            st.warning("Discount exceeds the manager-approval threshold. Manager approval is required.")
-        else:
-            st.info("Discount does not trigger the manager-approval threshold.")
+def scenario_table(quantity, price, cost, proposed):
+    levels = sorted(set([D(0), D(5), D(8), D(12), D(15), D(16), D(20), D(25), proposed]))
+    items = []
+    for level in levels:
+        result = analyze_deal(quantity, price, cost, level)
+        items.append({
+            "Discount (%)": float(level),
+            "Selling value (GBP)": float(result["selling_value"]),
+            "Contribution (GBP)": float(result["contribution"]),
+            "Margin (%)": float(result["contribution_margin_pct"]),
+            "Manager approval": "Required" if result["manager_approval_required"] else "Not required",
+            "Margin breach": "Yes" if result["margin_breach"] else "No",
+            "Policy status": result["policy_status"]
+        })
+    return items
 
-        left, right = st.columns(2)
-        with left:
-            st.subheader("Deal financials (GBP assumed)")
-            st.metric("Estimated selling value", f"£{float(financial['selling_value']):,.2f}")
-            st.metric("Estimated contribution", f"£{float(financial['contribution']):,.2f}")
-            st.write("**Policy status:**", financial["policy_status"])
-        with right:
-            st.subheader("Customer analytics")
-            st.write("**Customer:**", customer["account_name"])
-            st.write("**Segment:**", customer["customer_segment"])
-            if customer["historical_transactions_available"]:
-                st.write("**Historical revenue:**", f"£{customer['historical_revenue']:,.2f}")
-                st.write("**Estimated historical contribution:**", f"£{customer['estimated_contribution']:,.2f}")
-            else:
-                st.write("Insufficient Historical Data")
+def safe_discount_floor(quantity, price, cost):
+    target = MIN_MARGIN / D(100)
+    exact = D(100) * (D(1) - (quantity * cost) / (quantity * price * (D(1) - target)))
+    if exact < 0:
+        return None
+    return min(D(35), exact.quantize(D("0.01"), rounding=ROUND_DOWN))
 
-        st.subheader("Discount scenario comparison")
-        scenarios_df = pd.DataFrame(scenario["scenarios"])
-        st.dataframe(scenarios_df, use_container_width=True, hide_index=True)
-        st.line_chart(scenarios_df.set_index("discount_pct")["estimated_margin_pct"])
-        st.caption(scenario["recommendation_note"])
 
-        st.subheader("AI advisory recommendation")
-        # Only call Gemini when explicitly requested; changing inputs alone does not make an API call.
-        if st.button("Generate AI recommendation", type="primary"):
-            if not api_key:
-                st.error("Configure GEMINI_API_KEY in Streamlit Cloud → App settings → Secrets.")
-            else:
-                with st.spinner("Generating recommendation from verified DealGuard tools..."):
-                    response = run_dealguard_final(selected, result_state["question"])
-                if response is not None and response.text:
-                    st.session_state["ai_report"] = {"id": selected, "question": result_state["question"], "text": response.text, "log": list(tool_call_log)}
-                else:
-                    st.error("Gemini did not return a report. Check your model, API key and app logs.")
-        ai_report = st.session_state.get("ai_report")
-        if ai_report and ai_report["id"] == selected and ai_report["question"] == result_state["question"]:
-            st.markdown(ai_report["text"])
-            with st.expander("Verified tool execution log"):
-                st.json(ai_report["log"])
+def find_reference_opportunities(quantity, price, cost, discount, count=5):
+    """Retrieve comparable synthetic opportunities without claiming a customer match."""
+    source = opportunities.copy()
+    for col in ("Quantity", "Reference_Unit_Price", "Estimated_Direct_Cost_Per_Unit", "Proposed_Discount_Pct"):
+        source[col] = pd.to_numeric(source[col], errors="coerce")
+    source = source.dropna(subset=["Quantity", "Reference_Unit_Price",
+                                   "Estimated_Direct_Cost_Per_Unit", "Proposed_Discount_Pct"])
+    # Relative differences balance price, cost and quantity; discount is in percentage points.
+    source["_distance"] = (
+        (source["Quantity"] - float(quantity)).abs() / max(float(quantity), 1)
+        + (source["Reference_Unit_Price"] - float(price)).abs() / max(float(price), 1)
+        + (source["Estimated_Direct_Cost_Per_Unit"] - float(cost)).abs() / max(float(cost), 1)
+        + (source["Proposed_Discount_Pct"] - float(discount)).abs() / 35
+    )
+    records = []
+    for _, row in source.nsmallest(count, "_distance").iterrows():
+        result = analyze_deal(
+            row["Quantity"], row["Reference_Unit_Price"],
+            row["Estimated_Direct_Cost_Per_Unit"], row["Proposed_Discount_Pct"]
+        )
+        records.append({
+            "opportunity_id": str(row["Opportunity_ID"]),
+            "product_name": str(row["Product_Name"]),
+            "quantity": float(row["Quantity"]),
+            "unit_price_gbp": float(row["Reference_Unit_Price"]),
+            "estimated_unit_cost_gbp": float(row["Estimated_Direct_Cost_Per_Unit"]),
+            "discount_pct": float(row["Proposed_Discount_Pct"]),
+            "estimated_margin_pct": float(result["contribution_margin_pct"]),
+            "policy_status": result["policy_status"],
+            "similarity_note": "Nearest numeric example; not necessarily the same product or customer."
+        })
+    return records
 
-else:
-    st.write("Enter your own deal figures. All fields start blank. This mode uses the verified financial rules; it does not invent customer history or an opportunity record.")
-    with st.form("manual_deal_form"):
-        quantity_text = st.text_input("Quantity *", value="", placeholder="e.g. 100")
-        price_text = st.text_input("Unit selling price (£) *", value="", placeholder="e.g. 50")
-        cost_text = st.text_input("Estimated direct cost per unit (£) *", value="", placeholder="e.g. 30")
+def build_verified_context(inputs, financial, rows, safe, references):
+    return {
+        "user_proposed_deal": {k: float(v) for k, v in inputs.items()},
+        "calculated_financials": {
+            k: float(v) if isinstance(v, Decimal) else v for k, v in financial.items()
+        },
+        "maximum_margin_safe_discount_pct": float(safe) if safe is not None else None,
+        "verified_discount_scenarios": rows,
+        "background_reference_opportunities": references,
+        "reference_selection_method": "Five closest opportunities by relative quantity, price, cost and discount differences.",
+        "currency_label": "GBP (assumed, no currency symbol)",
+        "data_limitations": (
+            "User-entered deal has no verified customer identity. Reference opportunities "
+            "are synthetic comparators, NOT the user's own opportunity, customer, "
+            "historical transactions, or proof of sales outcomes."
+        ),
+    }
+
+def ask_gemini(context, question):
+    def retrieve_verified_deal_analysis() -> dict:
+        """Return user-entered deal figures and deterministic profitability/policy calculations."""
+        return {
+            "user_proposed_deal": context["user_proposed_deal"],
+            "calculated_financials": context["calculated_financials"],
+            "maximum_margin_safe_discount_pct": context["maximum_margin_safe_discount_pct"],
+            "currency_label": context["currency_label"],
+            "data_limitations": context["data_limitations"],
+        }
+
+    def retrieve_verified_scenarios_and_references() -> dict:
+        """Return calculated discount alternatives and comparable synthetic opportunity records."""
+        return {
+            "discount_scenarios": context["verified_discount_scenarios"],
+            "background_reference_opportunities": context["background_reference_opportunities"],
+            "reference_selection_method": context["reference_selection_method"],
+            "data_limitations": context["data_limitations"],
+        }
+
+    instructions = (
+        "You are DealGuard, a business-grade AI advisory agent for deal profitability and "
+        "discount intelligence. Call BOTH Python tools to ground your response. "
+        "Prioritize answering the USER'S PROMPT directly and specifically. "
+        "Use the user-entered deal as the ONLY basis for current deal profitability "
+        "and policy recommendations. Use the automatically retrieved opportunities "
+        "ONLY as illustrative background comparisons. The user did not select an "
+        "opportunity or provide a customer ID: never claim that any reference "
+        "opportunity or customer belongs to this proposed deal. Do not invent "
+        "customer history, predicted sales acceptance or measured market benchmarks. "
+        "Do not perform independent financial arithmetic; use verified tool outputs. "
+        "Use GBP as text, without any currency symbols. "
+        "Minimum contribution margin is 20 percent; discounts strictly above "
+        "15 percent require manager approval; margin breaches require human review "
+        "independently of discount approval. Margin-safe does not mean approved. "
+        "Give practical next steps and explain trade-offs relevant to the prompt. "
+        "Never claim Salesforce integration, data updates or autonomous deal approval. "
+        "Synthetic reference opportunities and estimated direct costs must be disclosed. "
+        + DEALGUARD_DECISION_RULES
+    )
+    response = gemini_client.models.generate_content(
+        model=DEALGUARD_MODEL,
+        contents=(
+            f"User's question: {question}\n"
+            "Use both tools for the submitted deal, scenario alternatives and "
+            "background reference opportunities. Provide a concise, decision-oriented "
+            "answer to the question, with a clear recommendation and policy caveats."
+        ),
+        config=types.GenerateContentConfig(
+            tools=[retrieve_verified_deal_analysis, retrieve_verified_scenarios_and_references],
+            system_instruction=instructions,
+        ),
+    )
+    return response.text or ""
+
+st.markdown('<div class="section-kicker">01 / PROPOSED DEAL</div>', unsafe_allow_html=True)
+st.markdown("### Enter your deal details")
+st.caption("All fields begin blank. DealGuard automatically consults comparable synthetic opportunities in the background; no opportunity ID is needed.")
+
+with st.form("deal_intelligence_form", clear_on_submit=False):
+    left, right = st.columns(2)
+    with left:
+        qty_text = st.text_input("Quantity *", value="", placeholder="e.g. 100")
+        cost_text = st.text_input("Estimated direct cost per unit (GBP) *", value="", placeholder="e.g. 30")
+    with right:
+        price_text = st.text_input("Unit selling price (GBP) *", value="", placeholder="e.g. 50")
         discount_text = st.text_input("Proposed discount (%) *", value="", placeholder="e.g. 16")
-        submitted_manual = st.form_submit_button("Analyse my deal", type="primary")
 
-    if submitted_manual:
-        if not all(v.strip() for v in [quantity_text, price_text, cost_text, discount_text]):
-            st.warning("Complete all four deal fields before analysing.")
-        else:
-            try:
-                values = [D(v.strip()) for v in [quantity_text, price_text, cost_text, discount_text]]
-                if any(not v.is_finite() for v in values):
-                    raise ValueError("Enter finite numeric values.")
-                result = analyze_deal(*values)
-                st.session_state["dealguard_result"] = {"mode": "manual", "values": values, "result": result}
-            except (ValueError, ArithmeticError, Exception) as exc:
-                st.error(f"Invalid deal inputs: {exc}")
-                st.session_state.pop("dealguard_result", None)
+    st.markdown('<div class="section-kicker">02 / YOUR QUESTION</div>', unsafe_allow_html=True)
+    st.markdown("### What would you like DealGuard to recommend?")
+    question = st.text_area(
+        "Your prompt *", value="", height=120,
+        placeholder="For example: Is this discount commercially advisable? Compare alternatives that protect margin and explain the required approvals.",
+    )
+    submitted = st.form_submit_button(
+        "Analyse deal & generate recommendation", type="primary", use_container_width=True
+    )
 
-    result_state = st.session_state.get("dealguard_result")
-    if result_state and result_state.get("mode") == "manual":
-        r = result_state["result"]
-        q, price, cost, discount = result_state["values"]
-        st.subheader("Your deal analysis")
-        c1, c2, c3 = st.columns(3)
-        c1.metric("Estimated selling value", f"£{r['selling_value']:,.2f}")
-        c2.metric("Estimated contribution", f"£{r['contribution']:,.2f}")
-        c3.metric("Estimated margin", f"{r['contribution_margin_pct']:.2f}%")
-        st.write("**Policy status:**", r["policy_status"])
-        if r["margin_breach"]:
-            st.error(f"Estimated margin is below the {MIN_MARGIN}% minimum. Human review is required.")
-        else:
-            st.success(f"Estimated margin meets the {MIN_MARGIN}% minimum.")
-        if r["manager_approval_required"]:
-            st.warning(f"The proposed discount exceeds {APPROVAL_THRESHOLD}%. Manager approval is required.")
-        else:
-            st.info("The proposed discount does not trigger manager approval.")
-        if not r["feasible_at_zero_discount"]:
-            st.warning("Even a zero discount cannot meet the minimum margin. Escalate for human review; reconsider price or estimated costs.")
-        else:
-            # Round DOWN to avoid suggesting a discount that crosses the exact margin boundary.
-            safe_exact = D(100) * (D(1) - cost / (price * (D(1) - MIN_MARGIN / D(100))))
-            safe = min(D(35), max(D(0), safe_exact.quantize(D("0.01"), rounding=ROUND_DOWN)))
-            recommended = min(discount, safe)
-            st.write(f"**Recommended margin-compliant discount for this proposal:** {recommended:.2f}%")
-            st.write(f"**Maximum margin-safe discount:** {safe:.2f}% (not automatic approval)")
-            if recommended > APPROVAL_THRESHOLD:
-                st.warning("This margin-safe alternative still requires manager approval because it exceeds 15%.")
-            st.write("**Next action:**", "Refer the proposed deal for human review." if r["human_review_required"] else "Continue through the normal human-controlled sales process.")
+if submitted:
+    st.session_state.pop("dg_report", None)
+    if not question.strip():
+        st.warning("Enter a question so the recommendation can address your prompt.")
+    else:
+        try:
+            q = clean_decimal(qty_text, "quantity", positive=True)
+            if q != q.to_integral_value():
+                raise ValueError("Quantity must be a whole number.")
+            price = clean_decimal(price_text, "unit selling price", positive=True)
+            cost = clean_decimal(cost_text, "estimated unit cost", nonnegative=True)
+            discount = clean_decimal(discount_text, "discount", nonnegative=True)
+            if discount > D(35):
+                raise ValueError("Proposed discount must be between 0% and 35%.")
+            financial = analyze_deal(q, price, cost, discount)
+            safe = safe_discount_floor(q, price, cost)
+            scenarios = scenario_table(q, price, cost, discount)
+            references = find_reference_opportunities(q, price, cost, discount)
+            inputs = {"quantity": q, "unit_price": price, "unit_cost": cost, "discount_pct": discount}
+            context = build_verified_context(inputs, financial, scenarios, safe, references)
+            st.session_state["dg_report"] = {
+                "context": context, "question": question.strip(), "ai_text": None, "ai_error": None
+            }
+            if gemini_client is not None:
+                with st.spinner("Calculating profitability, reviewing reference deals and generating your recommendation..."):
+                    try:
+                        st.session_state["dg_report"]["ai_text"] = ask_gemini(context, question.strip())
+                    except Exception as exc:
+                        st.session_state["dg_report"]["ai_error"] = str(exc)
+            else:
+                st.session_state["dg_report"]["ai_error"] = (
+                    "GEMINI_API_KEY is not configured in Streamlit Secrets."
+                )
+        except (ValueError, ArithmeticError) as exc:
+            st.error(str(exc))
 
-        levels = sorted(set([D(0), D(5), D(8), D(12), D(15), D(16), D(20), D(25), discount]))
-        rows = []
-        for level in levels:
-            if level > 35:
-                continue
-            a = analyze_deal(q, price, cost, level)
-            rows.append({"Discount (%)": float(level), "Selling value (£)": float(a["selling_value"]), "Contribution (£)": float(a["contribution"]), "Margin (%)": float(a["contribution_margin_pct"]), "Policy status": a["policy_status"]})
-        st.subheader("Calculated discount alternatives")
-        st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
-        st.caption("Calculations are advisory and use only your entered figures. Customer acceptance and actual sales outcomes cannot be predicted from these scenarios.")
+report = st.session_state.get("dg_report")
+if report:
+    context = report["context"]
+    f = context["calculated_financials"]
+    st.divider()
+    st.markdown('<div class="section-kicker">03 / FINANCIAL & POLICY ANALYSIS</div>', unsafe_allow_html=True)
+    st.markdown("## Your deal intelligence report")
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Selling value", f"{f['selling_value']:,.2f} GBP")
+    c2.metric("Contribution", f"{f['contribution']:,.2f} GBP")
+    c3.metric("Contribution margin", f"{f['contribution_margin_pct']:.2f}%")
+    c4.metric(
+        "Margin-safe discount ceiling",
+        f"{context['maximum_margin_safe_discount_pct']:.2f}%"
+        if context["maximum_margin_safe_discount_pct"] is not None else "Not feasible",
+    )
+
+    if f["margin_breach"]:
+        st.error("Margin breach: below the minimum 20% contribution margin. Human review is required.")
+    elif f["manager_approval_required"]:
+        st.warning("Margin meets policy, but the discount exceeds 15%. Manager approval is required.")
+    else:
+        st.success("Within the stated financial policy thresholds. This is not a deal approval.")
+    if f["margin_breach"] and f["manager_approval_required"]:
+        st.warning("Discount exceeds 15%, so manager approval is also required.")
+    if context["maximum_margin_safe_discount_pct"] is None:
+        st.warning("No margin-compliant discount is possible at these prices and costs, even at zero discount.")
+
+    st.markdown('<div class="section-kicker">04 / AI RECOMMENDATION</div>', unsafe_allow_html=True)
+    st.markdown("### Recommendation based on your prompt")
+    st.info(f"**Your question:** {report['question']}")
+    if report["ai_text"]:
+        st.markdown(report["ai_text"])
+    else:
+        if report["ai_error"]:
+            st.warning("AI recommendation is unavailable: " + report["ai_error"])
+        st.markdown("**Verified next action:** " + (
+            "Escalate for human review and revise the deal terms."
+            if f["margin_breach"] else
+            "Request manager approval before proceeding."
+            if f["manager_approval_required"] else
+            "Continue through the standard human-controlled sales review."
+        ))
+        if gemini_client is not None and st.button("Retry AI recommendation"):
+            with st.spinner("Generating recommendation..."):
+                try:
+                    st.session_state["dg_report"]["ai_text"] = ask_gemini(context, report["question"])
+                    st.session_state["dg_report"]["ai_error"] = None
+                    st.rerun()
+                except Exception as exc:
+                    st.error(f"Gemini request failed: {exc}")
+
+    with st.expander("See scenario comparisons and background reference opportunities"):
+        st.markdown("#### Calculated discount alternatives")
+        frame = pd.DataFrame(context["verified_discount_scenarios"])
+        st.dataframe(frame, use_container_width=True, hide_index=True)
+        st.line_chart(frame.set_index("Discount (%)")["Margin (%)"])
+        st.markdown("#### Similar opportunities retrieved automatically")
+        st.caption(
+            "These are numerically similar synthetic examples, not the customer's own "
+            "opportunities and not evidence of customer purchasing behavior."
+        )
+        st.dataframe(
+            pd.DataFrame(context["background_reference_opportunities"]),
+            use_container_width=True, hide_index=True
+        )
+    st.caption(
+        "Academic advisory prototype · GBP amounts without currency symbols · "
+        "Synthetic opportunity references · No live Salesforce access or autonomous approvals."
+    )
