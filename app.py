@@ -1,6 +1,7 @@
 # DealGuard Streamlit deployment — based on the uploaded Colab app.py
 # The validated financial and customer analytics functions are preserved.
 import os
+import time
 from pathlib import Path
 from decimal import Decimal, ROUND_HALF_UP, ROUND_DOWN
 import pandas as pd
@@ -880,6 +881,42 @@ def build_verified_context(inputs, financial, rows, safe, references):
         ),
     }
 
+def generate_with_fallback(*, contents, config):
+    """Retry transient Gemini failures and switch models when capacity is unavailable."""
+    primary = str(DEALGUARD_MODEL).strip()
+    try:
+        backup = str(st.secrets.get("GEMINI_BACKUP_MODEL", "gemini-3-flash-preview")).strip()
+    except Exception:
+        backup = os.environ.get("GEMINI_BACKUP_MODEL", "gemini-3-flash-preview").strip()
+    models = list(dict.fromkeys(m for m in (primary, backup) if m))
+    last_error = None
+    for model in models:
+        for attempt in range(3):
+            try:
+                return gemini_client.models.generate_content(
+                    model=model, contents=contents, config=config
+                )
+            except Exception as exc:
+                last_error = exc
+                message = str(exc).lower()
+                transient = any(token in message for token in (
+                    "503", "unavailable", "high demand", "overloaded",
+                    "429", "resource_exhausted", "500", "internal"
+                ))
+                missing_model = "404" in message or "not_found" in message
+                if transient and attempt < 2:
+                    time.sleep((2, 4)[attempt])
+                    continue
+                if transient or missing_model:
+                    break  # Try the backup model.
+                raise  # Authentication, configuration and other failures must be visible.
+    raise RuntimeError(
+        "Gemini could not generate a recommendation after automatic retries "
+        "and a backup-model attempt. Please try again later. "
+        f"Last service error: {str(last_error)[:350]}"
+    ) from last_error
+
+
 def ask_gemini(context, question):
     def retrieve_verified_deal_analysis() -> dict:
         """Return user-entered deal figures and deterministic profitability/policy calculations."""
@@ -920,8 +957,7 @@ def ask_gemini(context, question):
         "Synthetic reference opportunities and estimated direct costs must be disclosed. "
         + DEALGUARD_DECISION_RULES
     )
-    response = gemini_client.models.generate_content(
-        model=DEALGUARD_MODEL,
+    response = generate_with_fallback(
         contents=(
             f"User's question: {question}\n"
             "Use both tools for the submitted deal, scenario alternatives and "
