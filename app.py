@@ -759,7 +759,11 @@ div.stButton > button, div.stFormSubmitButton > button {
   border: none; border-radius: 12px; font-weight: 700; min-height: 44px;
 }
 div.stButton > button:hover, div.stFormSubmitButton > button:hover {color:white; border: 1px solid #9aece1;}
-input, textarea {border-radius: 10px !important;}
+input, textarea {border-radius: 10px !important; color: #17253b !important; background-color: #f1f5fa !important; caret-color: #2563eb !important; -webkit-text-fill-color: #17253b !important;}
+input::placeholder, textarea::placeholder {color: #66758a !important; -webkit-text-fill-color: #66758a !important; opacity: 1 !important;}
+[data-testid="stTextInput"] input, [data-testid="stTextArea"] textarea {color: #17253b !important; background-color: #f1f5fa !important; -webkit-text-fill-color: #17253b !important;}
+[data-testid="stTextInput"] [data-baseweb="input"], [data-testid="stTextArea"] [data-baseweb="textarea"] {background-color: #f1f5fa !important;}
+input:focus, textarea:focus {outline-color: #3b82f6 !important;}
 .hero {background:linear-gradient(120deg,#142e4b,#10233b 56%,#123c48);
  border:1px solid #2c5570; border-radius:24px; padding:34px 36px; margin-bottom:24px;}
 .eyebrow {color:#64e4d4; font-size:.8rem; font-weight:800; letter-spacing:.16em;}
