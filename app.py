@@ -446,7 +446,7 @@ def compare_discount_scenarios(
     return {
         "opportunity_id": opportunity_id,
         "account_name": str(row["Account_Name"]),
-        "currency": "GBP (assumed)",
+        "currency": "Not specified",
         "proposed_discount_pct": proposed_discount,
         "minimum_margin_pct": 20.0,
         "manager_approval_threshold_pct": 15.0,
@@ -517,7 +517,7 @@ def dealguard_verified_opportunity_tool(
     return {
         "opportunity": opportunity_result,
         "verified_customer_profile": customer_result,
-        "currency": "GBP (assumed)",
+        "currency": "Not specified",
         "verification_status": "CUSTOMER ID VERIFIED",
         "data_note": (
             "Opportunity data is synthetic. "
@@ -680,7 +680,7 @@ def run_dealguard_final(opportunity_id, user_question):
         "financial calculations. "
         "Never invent customer IDs, transactions, or financial "
         "scenario values. "
-        "Use GBP as the assumed currency. "
+        "Currency is unspecified; report monetary amounts without a currency label or symbol. "
         "Opportunity records are synthetic. "
         "Direct costs are simulated estimates. "
         "Historical customer analytics use a limited sample. "
@@ -745,7 +745,8 @@ st.markdown("""
 <style>
 .stApp {background: radial-gradient(ellipse at 80% 0%, #183355 0%, #0b1425 38%, #080f1d 100%); color: #e9f2ff;}
 [data-testid="stHeader"] {background: transparent;}
-[data-testid="stSidebar"] {background: #101c30;}
+[data-testid="stSidebar"] {display: none;}
+[data-testid="stSidebarCollapsedControl"] {display: none;}
 .block-container {max-width: 1200px; padding-top: 2rem; padding-bottom: 4rem;}
 h1,h2,h3 {color: #f0f6ff !important; letter-spacing: -.025em;}
 p, label, .stMarkdown {color: #d6e3f5;}
@@ -783,16 +784,7 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-with st.sidebar:
-    st.markdown("### Policy guardrails")
-    st.metric("Minimum contribution margin", f"{MIN_MARGIN}%")
-    st.metric("Manager approval above", f"{APPROVAL_THRESHOLD}%")
-    st.caption("Approval is required only when the proposed discount strictly exceeds the threshold. Margin breaches independently require human review.")
-    st.divider()
-    st.markdown("### Data context")
-    st.write(f"**{len(opportunities)}** reference opportunities")
-    st.write(f"**{len(accounts)}** customer accounts")
-    st.caption("Academic demonstration. Synthetic opportunities, estimated costs and sample-based customer history. No Salesforce connection or autonomous approvals.")
+# Sidebar intentionally omitted: streamlined single-page interface.
 
 def clean_decimal(raw, label, *, positive=False, nonnegative=False):
     if not raw.strip():
@@ -816,8 +808,8 @@ def scenario_table(quantity, price, cost, proposed):
         result = analyze_deal(quantity, price, cost, level)
         items.append({
             "Discount (%)": float(level),
-            "Selling value (GBP)": float(result["selling_value"]),
-            "Contribution (GBP)": float(result["contribution"]),
+            "Selling value": float(result["selling_value"]),
+            "Contribution": float(result["contribution"]),
             "Margin (%)": float(result["contribution_margin_pct"]),
             "Manager approval": "Required" if result["manager_approval_required"] else "Not required",
             "Margin breach": "Yes" if result["margin_breach"] else "No",
@@ -857,8 +849,8 @@ def find_reference_opportunities(quantity, price, cost, discount, count=5):
             "opportunity_id": str(row["Opportunity_ID"]),
             "product_name": str(row["Product_Name"]),
             "quantity": float(row["Quantity"]),
-            "unit_price_gbp": float(row["Reference_Unit_Price"]),
-            "estimated_unit_cost_gbp": float(row["Estimated_Direct_Cost_Per_Unit"]),
+            "unit_price": float(row["Reference_Unit_Price"]),
+            "estimated_unit_cost": float(row["Estimated_Direct_Cost_Per_Unit"]),
             "discount_pct": float(row["Proposed_Discount_Pct"]),
             "estimated_margin_pct": float(result["contribution_margin_pct"]),
             "policy_status": result["policy_status"],
@@ -876,7 +868,7 @@ def build_verified_context(inputs, financial, rows, safe, references):
         "verified_discount_scenarios": rows,
         "background_reference_opportunities": references,
         "reference_selection_method": "Five closest opportunities by relative quantity, price, cost and discount differences.",
-        "currency_label": "GBP (assumed, no currency symbol)",
+        "currency_label": "Currency not specified",
         "data_limitations": (
             "User-entered deal has no verified customer identity. Reference opportunities "
             "are synthetic comparators, NOT the user's own opportunity, customer, "
@@ -915,7 +907,7 @@ def ask_gemini(context, question):
         "opportunity or customer belongs to this proposed deal. Do not invent "
         "customer history, predicted sales acceptance or measured market benchmarks. "
         "Do not perform independent financial arithmetic; use verified tool outputs. "
-        "Use GBP as text, without any currency symbols. "
+        "The user has not specified a currency. Present monetary amounts as plain numbers without any currency symbol or currency label; do not infer one. "
         "Minimum contribution margin is 20 percent; discounts strictly above "
         "15 percent require manager approval; margin breaches require human review "
         "independently of discount approval. Margin-safe does not mean approved. "
@@ -947,9 +939,9 @@ with st.form("deal_intelligence_form", clear_on_submit=False):
     left, right = st.columns(2)
     with left:
         qty_text = st.text_input("Quantity *", value="", placeholder="e.g. 100")
-        cost_text = st.text_input("Estimated direct cost per unit (GBP) *", value="", placeholder="e.g. 30")
+        cost_text = st.text_input("Estimated direct cost per unit *", value="", placeholder="e.g. 30")
     with right:
-        price_text = st.text_input("Unit selling price (GBP) *", value="", placeholder="e.g. 50")
+        price_text = st.text_input("Unit selling price *", value="", placeholder="e.g. 50")
         discount_text = st.text_input("Proposed discount (%) *", value="", placeholder="e.g. 16")
 
     st.markdown('<div class="section-kicker">02 / YOUR QUESTION</div>', unsafe_allow_html=True)
@@ -1006,8 +998,8 @@ if report:
     st.markdown('<div class="section-kicker">03 / FINANCIAL & POLICY ANALYSIS</div>', unsafe_allow_html=True)
     st.markdown("## Your deal intelligence report")
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Selling value", f"{f['selling_value']:,.2f} GBP")
-    c2.metric("Contribution", f"{f['contribution']:,.2f} GBP")
+    c1.metric("Selling value", f"{f['selling_value']:,.2f}")
+    c2.metric("Contribution", f"{f['contribution']:,.2f}")
     c3.metric("Contribution margin", f"{f['contribution_margin_pct']:.2f}%")
     c4.metric(
         "Margin-safe discount ceiling",
@@ -1065,6 +1057,6 @@ if report:
             use_container_width=True, hide_index=True
         )
     st.caption(
-        "Academic advisory prototype · GBP amounts without currency symbols · "
+        "Academic advisory prototype · Amounts shown without an assumed currency · "
         "Synthetic opportunity references · No live Salesforce access or autonomous approvals."
     )
