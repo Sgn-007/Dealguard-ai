@@ -725,84 +725,164 @@ def run_dealguard_final(opportunity_id, user_question):
         return None
 
 
-# Streamlit stores secrets outside GitHub. No API calls occur until Analyze is clicked.
+# Hosting configuration: secrets are configured in Streamlit Cloud, not GitHub.
 try:
     api_key = st.secrets.get("GEMINI_API_KEY", os.environ.get("GEMINI_API_KEY", ""))
-except Exception:
-    api_key = os.environ.get("GEMINI_API_KEY", "")
-# Override in Streamlit Secrets if your Gemini account uses a different supported model.
-try:
     DEALGUARD_MODEL = st.secrets.get("GEMINI_MODEL", "gemini-2.5-flash")
 except Exception:
-    DEALGUARD_MODEL = "gemini-2.5-flash"
+    api_key = os.environ.get("GEMINI_API_KEY", "")
+    DEALGUARD_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
 gemini_client = genai.Client(api_key=api_key) if api_key else None
 
 st.title("DealGuard")
 st.caption("AI-Powered Deal Profitability & Discount Intelligence | Salesforce Sales Cloud concept prototype")
-st.info("Academic demonstration: synthetic opportunities, simulated direct costs and GBP assumed. No live Salesforce connection or automatic approvals.")
+st.info("Academic prototype: synthetic opportunity records, estimated direct costs and assumed GBP. Advisory only; no Salesforce updates or autonomous approvals.")
 
-ids = opportunities["Opportunity_ID"].astype(str).tolist()
-selected = st.selectbox("Sales opportunity", ids, index=ids.index("OPP00001") if "OPP00001" in ids else 0)
-question = st.text_area("Question for DealGuard", "Evaluate this opportunity's proposed discount, margin and customer history. Compare alternatives and recommend the next human-controlled action.")
+mode = st.radio("Analysis type", ["Existing opportunity", "Enter deal details manually"], horizontal=True)
 
-opp = analyze_opportunity(selected)
-financial = opp["financial_analysis"]
-scenario = compare_discount_scenarios_verified(selected)
-customer = get_customer_profile(opp["customer_id"])
+if mode == "Existing opportunity":
+    st.write("Enter an opportunity ID (for example, OPP00001). No opportunity is selected automatically.")
+    with st.form("opportunity_form"):
+        entered_id = st.text_input("Opportunity ID *", value="", placeholder="Enter opportunity ID")
+        question = st.text_area("Your question *", value="", placeholder="What would you like DealGuard to evaluate?")
+        submitted = st.form_submit_button("Analyse opportunity", type="primary")
 
-st.subheader(f"{selected} · {opp['account_name']}")
-st.caption(f"Product: {opp['product_name']} | Quantity: {opp['quantity']} | Sales representative: {opp['sales_representative']} | Stage: {opp['opportunity_stage']}")
-c1,c2,c3,c4 = st.columns(4)
-c1.metric("Proposed discount", f"{float(financial['proposed_discount_pct']):.2f}%")
-c2.metric("Estimated contribution margin", f"{float(financial['contribution_margin_pct']):.2f}%")
-c3.metric("Minimum margin", f"{float(MIN_MARGIN):.0f}%")
-safe = scenario["recommended_maximum_margin_safe_discount_pct"]
-c4.metric("Maximum margin-safe discount", f"{safe:.2f}%" if safe is not None else "Not feasible")
-
-if financial["margin_breach"]:
-    st.error("Contribution margin below policy minimum — human review required.")
-else:
-    st.success("Contribution margin meets the minimum policy threshold.")
-if financial["manager_approval_required"]:
-    st.warning("Proposed discount exceeds the manager-approval threshold — approval required.")
-else:
-    st.info("Manager approval not triggered by the discount threshold.")
-
-left,right = st.columns(2)
-with left:
-    st.subheader("Deal financials (GBP assumed)")
-    st.metric("Estimated selling value", f"£{float(financial['selling_value']):,.2f}")
-    st.metric("Estimated contribution", f"£{float(financial['contribution']):,.2f}")
-    st.write("**Policy status:**", financial["policy_status"])
-with right:
-    st.subheader("Customer analytics")
-    st.write("**Customer:**", customer["account_name"])
-    st.write("**Segment:**", customer["customer_segment"])
-    if customer["historical_transactions_available"]:
-        st.write("**Historical revenue:**", f"£{customer['historical_revenue']:,.2f}")
-        st.write("**Estimated historical contribution:**", f"£{customer['estimated_contribution']:,.2f}")
-    else:
-        st.write("Insufficient Historical Data")
-
-st.subheader("Discount scenario comparison")
-scenarios_df = pd.DataFrame(scenario["scenarios"])
-st.dataframe(scenarios_df, use_container_width=True, hide_index=True)
-st.line_chart(scenarios_df.set_index("discount_pct")["estimated_margin_pct"], x_label="Discount (%)", y_label="Estimated contribution margin (%)")
-if scenario["verified_recommended_scenario"] is not None:
-    st.caption("Maximum margin-safe discount is a financial boundary, not deal approval. Discounts above 15% independently require manager approval.")
-else:
-    st.warning("No discount can meet the minimum margin at current price and estimated cost. Escalate for human review.")
-
-st.subheader("AI advisory report")
-if st.button("Generate AI recommendation", type="primary"):
-    if not api_key:
-        st.error("Add GEMINI_API_KEY in Streamlit Community Cloud → App settings → Secrets.")
-    else:
-        with st.spinner("Gemini is reviewing verified DealGuard calculations..."):
-            response = run_dealguard_final(selected, question)
-        if response is not None and response.text:
-            st.markdown(response.text)
-            with st.expander("Verified tool execution log"):
-                st.json(tool_call_log)
+    if submitted:
+        opportunity_id = entered_id.strip().upper()
+        if not opportunity_id or not question.strip():
+            st.warning("Enter both an opportunity ID and a question.")
+        elif opportunity_id not in set(opportunities["Opportunity_ID"].astype(str)):
+            st.error(f"Opportunity {opportunity_id} was not found. Enter a valid opportunity ID from the dataset.")
         else:
-            st.error("Gemini did not return an advisory report. Check app logs, Gemini API access and GEMINI_MODEL secret.")
+            st.session_state["dealguard_result"] = {"mode": "existing", "id": opportunity_id, "question": question.strip()}
+
+    result_state = st.session_state.get("dealguard_result")
+    if result_state and result_state.get("mode") == "existing":
+        selected = result_state["id"]
+        opp = analyze_opportunity(selected)
+        financial = opp["financial_analysis"]
+        scenario = compare_discount_scenarios_verified(selected)
+        customer = get_customer_profile(opp["customer_id"])
+
+        st.subheader(f"{selected} · {opp['account_name']}")
+        st.caption(f"Product: {opp['product_name']} | Quantity: {opp['quantity']} | Sales representative: {opp['sales_representative']} | Stage: {opp['opportunity_stage']}")
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("Proposed discount", f"{float(financial['proposed_discount_pct']):.2f}%")
+        c2.metric("Estimated contribution margin", f"{float(financial['contribution_margin_pct']):.2f}%")
+        c3.metric("Minimum margin", f"{float(MIN_MARGIN):.0f}%")
+        safe = scenario["recommended_maximum_margin_safe_discount_pct"]
+        c4.metric("Maximum margin-safe discount", f"{safe:.2f}%" if safe is not None else "Not feasible")
+
+        if financial["margin_breach"]:
+            st.error("Contribution margin is below the policy minimum. Human review is required.")
+        else:
+            st.success("Contribution margin meets the minimum policy threshold.")
+        if financial["manager_approval_required"]:
+            st.warning("Discount exceeds the manager-approval threshold. Manager approval is required.")
+        else:
+            st.info("Discount does not trigger the manager-approval threshold.")
+
+        left, right = st.columns(2)
+        with left:
+            st.subheader("Deal financials (GBP assumed)")
+            st.metric("Estimated selling value", f"£{float(financial['selling_value']):,.2f}")
+            st.metric("Estimated contribution", f"£{float(financial['contribution']):,.2f}")
+            st.write("**Policy status:**", financial["policy_status"])
+        with right:
+            st.subheader("Customer analytics")
+            st.write("**Customer:**", customer["account_name"])
+            st.write("**Segment:**", customer["customer_segment"])
+            if customer["historical_transactions_available"]:
+                st.write("**Historical revenue:**", f"£{customer['historical_revenue']:,.2f}")
+                st.write("**Estimated historical contribution:**", f"£{customer['estimated_contribution']:,.2f}")
+            else:
+                st.write("Insufficient Historical Data")
+
+        st.subheader("Discount scenario comparison")
+        scenarios_df = pd.DataFrame(scenario["scenarios"])
+        st.dataframe(scenarios_df, use_container_width=True, hide_index=True)
+        st.line_chart(scenarios_df.set_index("discount_pct")["estimated_margin_pct"])
+        st.caption(scenario["recommendation_note"])
+
+        st.subheader("AI advisory recommendation")
+        # Only call Gemini when explicitly requested; changing inputs alone does not make an API call.
+        if st.button("Generate AI recommendation", type="primary"):
+            if not api_key:
+                st.error("Configure GEMINI_API_KEY in Streamlit Cloud → App settings → Secrets.")
+            else:
+                with st.spinner("Generating recommendation from verified DealGuard tools..."):
+                    response = run_dealguard_final(selected, result_state["question"])
+                if response is not None and response.text:
+                    st.session_state["ai_report"] = {"id": selected, "question": result_state["question"], "text": response.text, "log": list(tool_call_log)}
+                else:
+                    st.error("Gemini did not return a report. Check your model, API key and app logs.")
+        ai_report = st.session_state.get("ai_report")
+        if ai_report and ai_report["id"] == selected and ai_report["question"] == result_state["question"]:
+            st.markdown(ai_report["text"])
+            with st.expander("Verified tool execution log"):
+                st.json(ai_report["log"])
+
+else:
+    st.write("Enter your own deal figures. All fields start blank. This mode uses the verified financial rules; it does not invent customer history or an opportunity record.")
+    with st.form("manual_deal_form"):
+        quantity_text = st.text_input("Quantity *", value="", placeholder="e.g. 100")
+        price_text = st.text_input("Unit selling price (£) *", value="", placeholder="e.g. 50")
+        cost_text = st.text_input("Estimated direct cost per unit (£) *", value="", placeholder="e.g. 30")
+        discount_text = st.text_input("Proposed discount (%) *", value="", placeholder="e.g. 16")
+        submitted_manual = st.form_submit_button("Analyse my deal", type="primary")
+
+    if submitted_manual:
+        if not all(v.strip() for v in [quantity_text, price_text, cost_text, discount_text]):
+            st.warning("Complete all four deal fields before analysing.")
+        else:
+            try:
+                values = [D(v.strip()) for v in [quantity_text, price_text, cost_text, discount_text]]
+                if any(not v.is_finite() for v in values):
+                    raise ValueError("Enter finite numeric values.")
+                result = analyze_deal(*values)
+                st.session_state["dealguard_result"] = {"mode": "manual", "values": values, "result": result}
+            except (ValueError, ArithmeticError, Exception) as exc:
+                st.error(f"Invalid deal inputs: {exc}")
+                st.session_state.pop("dealguard_result", None)
+
+    result_state = st.session_state.get("dealguard_result")
+    if result_state and result_state.get("mode") == "manual":
+        r = result_state["result"]
+        q, price, cost, discount = result_state["values"]
+        st.subheader("Your deal analysis")
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Estimated selling value", f"£{r['selling_value']:,.2f}")
+        c2.metric("Estimated contribution", f"£{r['contribution']:,.2f}")
+        c3.metric("Estimated margin", f"{r['contribution_margin_pct']:.2f}%")
+        st.write("**Policy status:**", r["policy_status"])
+        if r["margin_breach"]:
+            st.error(f"Estimated margin is below the {MIN_MARGIN}% minimum. Human review is required.")
+        else:
+            st.success(f"Estimated margin meets the {MIN_MARGIN}% minimum.")
+        if r["manager_approval_required"]:
+            st.warning(f"The proposed discount exceeds {APPROVAL_THRESHOLD}%. Manager approval is required.")
+        else:
+            st.info("The proposed discount does not trigger manager approval.")
+        if not r["feasible_at_zero_discount"]:
+            st.warning("Even a zero discount cannot meet the minimum margin. Escalate for human review; reconsider price or estimated costs.")
+        else:
+            # Round DOWN to avoid suggesting a discount that crosses the exact margin boundary.
+            safe_exact = D(100) * (D(1) - cost / (price * (D(1) - MIN_MARGIN / D(100))))
+            safe = min(D(35), max(D(0), safe_exact.quantize(D("0.01"), rounding=ROUND_DOWN)))
+            recommended = min(discount, safe)
+            st.write(f"**Recommended margin-compliant discount for this proposal:** {recommended:.2f}%")
+            st.write(f"**Maximum margin-safe discount:** {safe:.2f}% (not automatic approval)")
+            if recommended > APPROVAL_THRESHOLD:
+                st.warning("This margin-safe alternative still requires manager approval because it exceeds 15%.")
+            st.write("**Next action:**", "Refer the proposed deal for human review." if r["human_review_required"] else "Continue through the normal human-controlled sales process.")
+
+        levels = sorted(set([D(0), D(5), D(8), D(12), D(15), D(16), D(20), D(25), discount]))
+        rows = []
+        for level in levels:
+            if level > 35:
+                continue
+            a = analyze_deal(q, price, cost, level)
+            rows.append({"Discount (%)": float(level), "Selling value (£)": float(a["selling_value"]), "Contribution (£)": float(a["contribution"]), "Margin (%)": float(a["contribution_margin_pct"]), "Policy status": a["policy_status"]})
+        st.subheader("Calculated discount alternatives")
+        st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+        st.caption("Calculations are advisory and use only your entered figures. Customer acceptance and actual sales outcomes cannot be predicted from these scenarios.")
