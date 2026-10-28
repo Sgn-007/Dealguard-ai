@@ -728,10 +728,10 @@ def run_dealguard_final(opportunity_id, user_question):
 # Hosting configuration: secrets are configured in Streamlit Cloud, not GitHub.
 try:
     api_key = st.secrets.get("GEMINI_API_KEY", os.environ.get("GEMINI_API_KEY", ""))
-    DEALGUARD_MODEL = st.secrets.get("GEMINI_MODEL", "gemini-2.5-flash")
+    DEALGUARD_MODEL = st.secrets.get("GEMINI_MODEL", "gemini-3.8-flash")
 except Exception:
     api_key = os.environ.get("GEMINI_API_KEY", "")
-    DEALGUARD_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
+    DEALGUARD_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.8-flash")
 gemini_client = genai.Client(api_key=api_key) if api_key else None
 
 
